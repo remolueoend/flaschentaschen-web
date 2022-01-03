@@ -1,5 +1,7 @@
 # flaschentaschen-web
-A small CLI tool for rendering websites on a remote [flaschentaschen](https://github.com/hzeller/flaschen-taschen) server.
+A small CLI tool for rendering websites on a remote [flaschentaschen](https://github.com/hzeller/flaschen-taschen) server:
+
+![image](https://user-images.githubusercontent.com/7881606/147987529-3a744e97-ee9c-4d20-a050-5111236084de.png)
 
 It uses a headless chrome instance to get a stream of screen captures, transforms them to PPM file blobs and sends them to a remote flaschentaschen server.
 
