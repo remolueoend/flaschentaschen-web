@@ -1,0 +1,65 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'flaschentaschen-web'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=flaschentaschen-web"],
+        "filter": {
+          "name": "flaschentaschen-web",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'flaschentaschen-web'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=flaschentaschen-web",
+          "--package=flaschentaschen-web"
+        ],
+        "filter": {
+          "name": "flaschentaschen-web",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "--screen-width=200",
+        "--screen-height=32",
+        "--url=http://localhost:8080/page.html",
+        "--ft-endpoint=localhost:1337",
+        "-vv"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'flaschentaschen-web'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=flaschentaschen-web",
+          "--package=flaschentaschen-web"
+        ],
+        "filter": {
+          "name": "flaschentaschen-web",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
