@@ -4,19 +4,19 @@ A small CLI tool for rendering websites on a remote [flaschentaschen](https://gi
 It uses a headless chrome instance to get a stream of screen captures, transforms them to PPM file blobs and sends them to a remote flaschentaschen server.
 
 ## Setup
-Following dependencies must be installed:
+Following build dependencies must be installed:
 * Rust stable
 * ImageMagick (version 7.0.x to 7.1.x)
 * Clang (version 3.5 or higher) 
 
-See https://github.com/nlfiedler/magick-rust for more info, which is responsible for these dependencies.
+See https://github.com/nlfiedler/magick-rust for more info, which is responsible for most of these dependencies.
 
-After that, clone this repository and navigate into the project root:
+After that, clone this repository, navigate into the project root and run:
 ```sh
 cargo build [--release]
 ```
 
-You will then find the built cli executable at `<project-root>/target/release/flaschentaschen-web`
+You will then find the CLI executable at `<project-root>/target/release/flaschentaschen-web`
 
 ## Usage
 
@@ -49,4 +49,4 @@ OPTIONS:
             Print version information
 ```
 
-Make sure your flaschentaschen server and the website to render are accessible before running `flaschentaschen-web`.
+Make sure your flaschentaschen server and the website to render are accessible before running `flaschentaschen-web`. Big thanks to [Henner Zeller](https://github.com/hzeller) for his amazing projects!
