@@ -160,6 +160,7 @@ pub fn get_ppm_from_jpeg(base64_str: &String) -> Result<Vec<u8>> {
     let mut output: Vec<u8> = Vec::new();
     input_image.write_to(
         &mut output,
+        // PPM with magic P6:
         ImageOutputFormat::Pnm(PNMSubtype::Pixmap(SampleEncoding::Binary)),
     )?;
 
