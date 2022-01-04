@@ -24,7 +24,7 @@ fn main() -> Result<()> {
     let args = CliArgs::parse();
     loggerv::init_with_verbosity(args.verbosity)?;
 
-    let browser_opts = ScreencastOptions {
+    let screencast_opts = ScreencastOptions {
         url: args.url,
         width: args.screen_width,
         height: args.screen_height,
@@ -32,10 +32,10 @@ fn main() -> Result<()> {
 
     // leak is fine here: this context instance is created once and passed as reference to `on_screencast_frame`.
     // As soon as main exits, this memory reference is not needed anymore because the thread handling the browser tab event is haltet too.
-    let b: &'static mut FlaschenTaschen =
+    let flaschentaschen: &'static mut FlaschenTaschen =
         Box::leak(Box::new(FlaschenTaschen::new(args.ft_endpoint)?));
 
-    let browser = start_screencasting(browser_opts, on_screencast_frame, b)?;
+    let browser = start_screencasting(screencast_opts, on_screencast_frame, flaschentaschen)?;
     info!(
         "started chrome instance with process id {}",
         browser.get_process_id().unwrap()

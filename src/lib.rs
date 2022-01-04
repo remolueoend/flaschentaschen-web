@@ -58,11 +58,11 @@ impl Display for FlaschenTaschen {
 /// Starts the screencasting process by:
 /// 1. spawing a new chrome instance
 /// 2. navigating to the given URL
-/// 3. attaching an event handler for incoming frames which forwards them to the flaschentaschen server.
+/// 3. attaching an event handler for incoming frames which forwards them to the given `on_frame` callback.
 /// This method will return the created browser instance. It is important to keep the returned instance in scope.
 /// If it goes out of scope or the main thread terminates, the browser will be stopped too and screencasting halts.
 ///
-/// This function will call the provided callback for each received frame together with the given context.
+/// This function will call the provided callback for each received frame together with the given static context.
 /// This is necessary because the callback will run in a separate thread.
 pub fn start_screencasting<F, C>(
     opts: ScreencastOptions,
