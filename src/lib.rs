@@ -1,21 +1,17 @@
-use std::sync::{Mutex, Once};
-use std::{fmt::Display, sync::Arc};
-
 use base64;
-
 use eyre::{eyre, Result};
-
 use headless_chrome::protocol::cdp::Page::{self, StartScreencastFormatOption};
 use headless_chrome::{protocol::cdp::types::Event, Browser};
+use image::pnm::{PNMSubtype, SampleEncoding};
+use image::ImageOutputFormat;
+use image::{load_from_memory_with_format, ImageFormat};
 use log::{error, info, trace};
-use magick_rust::{magick_wand_genesis, MagickWand};
 use serde_json;
 use std::net::UdpSocket;
+use std::sync::Mutex;
+use std::{fmt::Display, sync::Arc};
 
 pub mod cli;
-
-/// Used to make sure we initialize Magick only once
-static INIT_MAGICK: Once = Once::new();
 
 /// Wraps a Result value with a compatible error type and returns a new result with an eyre-compatible Report error type.
 /// The given message is prepended to the display result of the original error.
@@ -32,13 +28,30 @@ pub struct ScreencastOptions {
 
 /// Provides a connection context to a flaschentaschen server
 pub struct FlaschenTaschen {
+    address: String,
     pub socket: UdpSocket,
 }
 impl FlaschenTaschen {
+    /// Returns a new flaschentaschen instance for the given host/port.
     pub fn new(host_port: String) -> Result<FlaschenTaschen> {
         let socket = UdpSocket::bind("[::]:0")?; // bind local UDP socket
-        socket.connect(host_port)?;
-        Ok(FlaschenTaschen { socket })
+        socket.connect(&host_port)?;
+        Ok(FlaschenTaschen {
+            address: host_port,
+            socket,
+        })
+    }
+
+    /// Sends a given PPM byte slice this flaschentaschen server.
+    pub fn send_ppm(&self, ppm: &[u8]) -> Result<usize> {
+        self.socket
+            .send(ppm)
+            .map_err(|err| eyre!("failed to send PPM to {}: {}", self, err))
+    }
+}
+impl Display for FlaschenTaschen {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FlaschenTaschen@{}", self.address)
     }
 }
 
@@ -85,49 +98,50 @@ where
     // `consecutive_err_count` will count consecutive errors while handling incoming frames to stop screencasting
     // as soon as a threshold is reached.
     let consecutive_err_count = Arc::new(Mutex::new(0));
-    map_err(
-        tab.add_event_listener(Arc::new(move |event: &Event| match event {
-            Event::PageScreencastFrame(frame) => {
-                let mut current_err_count = consecutive_err_count.lock().unwrap();
-                trace!(
-                    "got frame: {}",
-                    frame.params.metadata.timestamp.expect("missing timestamp")
+    let event_listener = move |event: &Event| match event {
+        Event::PageScreencastFrame(frame) => {
+            let mut current_err_count = consecutive_err_count.lock().unwrap();
+            trace!(
+                "got frame: {}",
+                frame.params.metadata.timestamp.expect("missing timestamp")
+            );
+            // we do catch potential errors but only log them and continue with the next frame.
+            // if we get more than a fixed threshold of consecutive errors, we stop the screencasting
+            let callback_result = on_frame(frame, on_frame_context);
+            if callback_result.is_ok() {
+                *current_err_count = 0;
+            } else {
+                *current_err_count += 1;
+                error!(
+                    "frame handler failed (consecutive errors: {}): {}",
+                    current_err_count,
+                    callback_result.unwrap_err()
                 );
-                // we do catch potential errors but only log them and continue with the next frame.
-                // if we get more than 10 consecutive errors, we stop the screencasting
-                let callback_result = on_frame(frame, on_frame_context);
-                if callback_result.is_ok() {
-                    *current_err_count = 0;
-                } else {
-                    *current_err_count += 1;
-                    error!(
-                        "frame handler failed (consecutive errors: {}): {}",
-                        current_err_count,
-                        callback_result.unwrap_err()
-                    );
-                }
-
-                // TODO: for some reason, UdpSocket.send will return Ok() even if the server is not reachable.
-                // this will wrongly reset the consecutive error count.
-                if *current_err_count > 1000 {
-                    let _ = closure_tab
-                        .call_method(Page::StopScreencast(Some(serde_json::value::Value::Null)));
-                } else {
-                    let _ = closure_tab.call_method(Page::ScreencastFrameAck {
-                        session_id: frame.params.session_id,
-                    });
-                }
             }
-            _ => {}
-        })),
-        "Failed to subscribe to event",
+
+            // TODO: for some reason, UdpSocket.send will return Ok() even if the server is not reachable.
+            // this will wrongly reset the consecutive error count.
+            if *current_err_count > 1000 {
+                let _ = closure_tab
+                    .call_method(Page::StopScreencast(Some(serde_json::value::Value::Null)));
+            } else {
+                let _ = closure_tab.call_method(Page::ScreencastFrameAck {
+                    session_id: frame.params.session_id,
+                });
+            }
+        }
+        _ => {}
+    };
+    map_err(
+        tab.add_event_listener(Arc::new(event_listener)),
+        "Failed to attach event listener to tab",
     )?;
 
     // tell chrome to start screencasting:
     map_err(
         tab.call_method(Page::StartScreencast {
             every_nth_frame: Some(1),
-            format: Some(StartScreencastFormatOption::Png),
+            format: Some(StartScreencastFormatOption::Jpeg),
             max_height: Some(opts.height),
             max_width: Some(opts.width),
             quality: Some(100),
@@ -138,27 +152,16 @@ where
     Ok(browser)
 }
 
-/// Accepts a base64 encoded string of a PNG image and returns its PPM counterpart as a byte vector.
-pub fn get_ppm_from_png(base64_str: &String) -> Result<Vec<u8>> {
-    INIT_MAGICK.call_once(|| {
-        magick_wand_genesis();
-    });
+/// Accepts a base64 encoded string of a JPEG image and returns its PPM counterpart as a byte vector.
+pub fn get_ppm_from_jpeg(base64_str: &String) -> Result<Vec<u8>> {
     let buffer = base64::decode(base64_str)?;
-    let wand = MagickWand::new();
-    wand.read_image_blob(buffer)
-        .map_err(|err| eyre!("failed to read base64 PNG: {}", err))?;
+    let input_image = load_from_memory_with_format(buffer.as_slice(), ImageFormat::Jpeg)?;
 
-    let output = wand
-        .write_image_blob("ppm")
-        .map_err(|err| eyre!("failed to write to ppm: {}", err))?;
+    let mut output: Vec<u8> = Vec::new();
+    input_image.write_to(
+        &mut output,
+        ImageOutputFormat::Pnm(PNMSubtype::Pixmap(SampleEncoding::Binary)),
+    )?;
 
     Ok(output)
-}
-
-/// Sends a given PPM byte slice to the given flaschentaschen server.
-pub fn send_ppm_to_flaschentaschen(ppm: &[u8], flaschentaschen: &FlaschenTaschen) -> Result<usize> {
-    flaschentaschen
-        .socket
-        .send(ppm)
-        .map_err(|err| eyre!("failed to send PPM to flaschentaschen: {}", err))
 }

@@ -36,7 +36,7 @@
       "args": [
         "--screen-width=200",
         "--screen-height=32",
-        "--url=http://localhost:8080/page.html",
+        "--url=https://www.google.com",
         "--ft-endpoint=localhost:1337",
         "-vv"
       ],

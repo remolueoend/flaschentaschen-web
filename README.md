@@ -7,11 +7,7 @@ It uses a headless chrome instance to get a stream of screen captures, transform
 
 ## Setup
 Following build dependencies must be installed:
-* Rust stable
-* ImageMagick (version 7.0.x to 7.1.x)
-* Clang (version 3.5 or higher) 
-
-See https://github.com/nlfiedler/magick-rust for more info, which is responsible for most of these dependencies.
+* [Rust stable toolchain](https://www.rust-lang.org/tools/install)
 
 After that, clone this repository, navigate into the project root and run:
 ```sh

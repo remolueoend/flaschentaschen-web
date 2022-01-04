@@ -1,9 +1,7 @@
 use clap::Parser;
 use color_eyre::eyre::Result;
 use flaschentaschen_web::{cli::CliArgs, ScreencastOptions};
-use flaschentaschen_web::{
-    get_ppm_from_png, send_ppm_to_flaschentaschen, start_screencasting, FlaschenTaschen,
-};
+use flaschentaschen_web::{get_ppm_from_jpeg, start_screencasting, FlaschenTaschen};
 use headless_chrome::protocol::cdp::Page;
 use log::info;
 use signal_hook::{consts::SIGINT, iterator::Signals};
@@ -15,8 +13,8 @@ fn on_screencast_frame(
     frame: &Page::events::ScreencastFrameEvent,
     flaschentaschen: &FlaschenTaschen,
 ) -> Result<()> {
-    let ppm = get_ppm_from_png(&frame.params.data)?;
-    send_ppm_to_flaschentaschen(ppm.as_slice(), flaschentaschen)?;
+    let ppm = get_ppm_from_jpeg(&frame.params.data)?;
+    flaschentaschen.send_ppm(ppm.as_slice())?;
 
     Ok(())
 }
