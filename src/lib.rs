@@ -105,6 +105,7 @@ where
                 "got frame: {}",
                 frame.params.metadata.timestamp.expect("missing timestamp")
             );
+
             // we do catch potential errors but only log them and continue with the next frame.
             // if we get more than a fixed threshold of consecutive errors, we stop the screencasting
             let callback_result = on_frame(frame, on_frame_context);
