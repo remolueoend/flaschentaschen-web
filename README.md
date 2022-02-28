@@ -48,3 +48,8 @@ OPTIONS:
 ```
 
 Make sure your flaschentaschen server and the website to render are accessible before running `flaschentaschen-web`. Big thanks to [Henner Zeller](https://github.com/hzeller) for his amazing projects!
+
+
+## Development
+### Cross-compile for the RaspberryPi platform
+Follow the README at [./tools/build-rspi](./tools/build-rspi)
